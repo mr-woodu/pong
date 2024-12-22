@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Ping Pong Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            background-color: #1a0033;
+            /* Dark Purple Background */
+            color: white;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .paddle {
+            position: absolute;
+            width: 20vw;
+            max-width: 150px;
+            height: 20px;
+            background-color: #ff00ff;
+            /* Neon Pink Paddle */
+            box-shadow: 0 0 15px #ff00ff;
+            bottom: 10px;
+            border-radius: 10px;
+        }
+
+        #ball {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #00ff00;
+            /* Neon Green Ball */
+            border-radius: 50%;
+            box-shadow: 0 0 15px #00ff00;
+            transition: transform 0.05s linear;
+            /* Smooth ball movement */
+        }
+
+        #scoreboard {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 1.2rem;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        #failure,
+        #success {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.5rem;
+            display: none;
+            color: #ff0000;
+            /* Bright Red */
+            text-shadow: 0 0 15px #ff0000;
+        }
+
+        #success {
+            color: rgb(2, 255, 2) !important;
+            text-shadow: 0 0 15px rgb(2, 255, 2);
+        }
+
+        #start-screen {
+            width: 100vw;
+            height: 100vh;
+            background-color: #1a0033;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+        }
+
+        #start-button {
+            padding: 15px 30px;
+            background-color: #00ff00;
+            color: black;
+            font-size: 1.5rem;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            box-shadow: 0 0 10px #00ff00;
+            transition: all 0.3s ease;
+        }
+
+        #start-button:hover {
+            background-color: #00cc00;
+            box-shadow: 0 0 15px #00cc00;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="start-screen">
+        <img src="ackosaur.png" width="90%"/>
+        <br>
+        <br>
+        <button id="start-button">Start Game</button>
+    </div>
+
+    <div id="game-container">
+        <div id="scoreboard">Hits: 0</div>
+        <div id="failure">Come on!<br><small>No me digas que no puedes hacer más de diez</small></div>
+        <div id="success">Genial!<br><small>Pero ... deberías probar un tenis de mesa de verdad ;-)</small></div>
+        <div id="ball"></div>
+        <div class="paddle" id="paddle"></div>
+    </div>
+
+    <!-- Sound Effects -->
+    <audio id="paddle-sound" src="ball-hit.mp3" preload="auto"></audio>
+    <audio id="wall-sound" src="wall-hit.mp3" preload="auto"></audio>
+    <audio id="gameover-sound" src="game-over.mp3" preload="auto"></audio>
+
+    <!-- jQuery CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            let ball = $('#ball');
+            let paddle = $('#paddle');
+            let container = $('#game-container');
+            let scoreboard = $('#scoreboard');
+            let startScreen = $('#start-screen');
+            let startButton = $('#start-button');
+            let failureText = $('#failure');
+            let successText = $('#success');
+
+            // Sounds
+            let paddleSound = $('#paddle-sound')[0];
+            let wallSound = $('#wall-sound')[0];
+            let gameOverSound = $('#gameover-sound')[0];
+
+            let ballX = 50, ballY = 50; // Ball Position
+            let ballSpeedX = 4, ballSpeedY = 4; // Ball Speed
+            let hits = 0;
+            let gameOver = false;
+
+            let paddleX = container.width() / 2 - paddle.width() / 2;
+            paddle.css('left', paddleX + 'px');
+
+            // Handle Paddle Movement (Mouse or Touch)
+            container.on('mousemove touchmove', function (e) {
+                if (gameOver) return;
+                let pageX = e.pageX || e.originalEvent.touches[0].pageX;
+                let paddlePosX = pageX - paddle.width() / 2;
+                if (paddlePosX >= 0 && paddlePosX + paddle.width() <= container.width()) {
+                    paddleX = paddlePosX;
+                    paddle.css('left', paddleX + 'px');
+                }
+            });
+
+            // Game Loop
+            function moveBall() {
+                if (gameOver) return;
+
+                ballX += ballSpeedX;
+                ballY += ballSpeedY;
+
+                // Bounce Ball Off Walls
+                if (ballX <= 0 || ballX >= container.width() - ball.width()) {
+                    ballSpeedX = -ballSpeedX;
+                    wallSound.play(); // Play wall bounce sound
+                }
+                if (ballY <= 0) {
+                    ballSpeedY = -ballSpeedY;
+                    wallSound.play(); // Play wall bounce sound
+                }
+
+                // Paddle Collision Detection
+                if (ballY + ball.height() >= container.height() - paddle.height() - 10) {
+                    if (ballX + ball.width() > paddleX && ballX < paddleX + paddle.width()) {
+                        ballSpeedY = -ballSpeedY;
+                        hits++;
+                        if (hits > 10) ball.css("background-color", "#00dbff")
+                        else if (hits > 5) ball.css("background-color", "#fff000")
+                        paddleSound.play(); // Play paddle hit sound
+                        scoreboard.text(`Hits: ${hits}`);
+                    } else {
+                        endGame();
+                    }
+                }
+
+                // Update Ball Position
+                ball.css({ top: ballY + 'px', left: ballX + 'px' });
+                requestAnimationFrame(moveBall);
+            }
+
+            // End the Game
+            function endGame() {
+                gameOver = true;
+                if (hits > 10)
+                    successText.fadeIn();
+                else
+                    failureText.fadeIn();
+                gameOverSound.play(); // Play game over sound
+            }
+
+            // Start the Game
+            startButton.click(function () {
+                startScreen.hide();
+                container.show();
+                moveBall();
+            });
+        });
+    </script>
+</body>
+
+</html>
