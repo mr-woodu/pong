@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neon Ping Pong Game</title>
     <style>
+        :root {
+            --vh: 100vh;
+            /* Default for fallback */
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -23,7 +28,7 @@
         #game-container {
             position: relative;
             width: 100vw;
-            height: 100vh;
+            height: var(--vh);
             display: none;
             justify-content: center;
             align-items: center;
@@ -226,6 +231,20 @@
                 container.show();
                 moveBall();
             });
+
+            function setVH() {
+                const vh = window.innerHeight;
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
+            }
+
+            // Set the initial height
+            setVH();
+
+            // Update height on window resize or orientation change
+            window.addEventListener('resize', setVH);
+            window.addEventListener('orientationchange', setVH);
+
+
         });
     </script>
 </body>
